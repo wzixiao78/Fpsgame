@@ -35,7 +35,6 @@ public class AllyBrain : MonoBehaviour
             }
         }
 
-        // ======= 终极诊断区 (每秒汇报一次) =======
         logTimer += Time.deltaTime;
         if (logTimer >= 1f)
         {

@@ -7,7 +7,7 @@ public class GunData : ScriptableObject
     [Header("基础信息")]
     public string gunName = "新武器";
 
-    [Header("💥 伤害与射程")]
+    [Header("伤害与射程")]
     [Tooltip("子弹单发伤害")]
     public int damage = 30;
 
@@ -28,7 +28,7 @@ public class GunData : ScriptableObject
     [Tooltip("玩家最多能带多少发备用子弹")]
     public int maxReserveAmmo = 90;
 
-    [Header("🎯 弹道与后坐力 (硬核手感)")]
+    [Header("弹道与后坐力 (硬核手感)")]
     [Tooltip("准星散布大小：0代表指哪打哪(激光枪)，0.05代表步枪连射散布")]
     [Range(0f, 0.2f)] // 变成一个滑动条，防止填太大子弹飞到脑后
     public float spread = 0.02f;
