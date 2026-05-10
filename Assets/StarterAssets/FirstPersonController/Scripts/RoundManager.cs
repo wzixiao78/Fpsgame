@@ -15,6 +15,7 @@ public class RoundManager : MonoBehaviour
     public int scoreToWin = 13;
     private bool isMatchOver = false;
     private int enemiesAlive = 0;
+    private int alliesAlive = 0; // (新增) 记录己方存活人数
 
     [Header("出生点设置")]
     public GameObject enemyPrefab;
@@ -31,6 +32,13 @@ public class RoundManager : MonoBehaviour
     public TextMeshProUGUI centerMessageText;
     public TextMeshProUGUI playerScoreText;
     public TextMeshProUGUI enemyScoreText;
+
+    // ==========================================
+    [Header("UI 头像设置 (新增)")]
+    public Sprite kayoIcon;             // Kayo 头像图片
+    public GameObject playerIconsGroup; // 己方头像组 (PlayerIconsGroup)
+    public GameObject enemyIconsGroup;  // 敌人头像组 (EnemyIconsGroup)
+    // ==========================================
 
     [Header("时间设置")]
     public float preparationTime = 20f;
@@ -137,12 +145,20 @@ public class RoundManager : MonoBehaviour
         currentTimer = combatTime;
         if (centerMessageText != null) centerMessageText.text = "COMBAT PHASE!";
 
-        if (enemyPrefab == null || spawnPoints.Length == 0) return;
-        enemiesAlive = spawnPoints.Length;
-        for (int i = 0; i < spawnPoints.Length; i++)
+        // 🧮 (新增) 计算本回合的己方总人数 = 玩家(1) + 友军数量
+        alliesAlive = 1 + allySpawnPoints.Length;
+
+        if (enemyPrefab != null && spawnPoints.Length > 0)
         {
-            Instantiate(enemyPrefab, spawnPoints[i].position, spawnPoints[i].rotation);
+            enemiesAlive = spawnPoints.Length;
+            for (int i = 0; i < spawnPoints.Length; i++)
+            {
+                Instantiate(enemyPrefab, spawnPoints[i].position, spawnPoints[i].rotation);
+            }
         }
+
+        // 🖼️ (新增) 初始化双方头像 UI
+        InitIcons();
     }
 
     public void PlayerWonRound()
@@ -162,8 +178,69 @@ public class RoundManager : MonoBehaviour
     public void OnEnemyDied()
     {
         enemiesAlive--;
+
+        // 💀 (新增) 熄灭一个敌人头像
+        UpdateSurvivalUI(enemyIconsGroup, enemiesAlive);
+
         if (enemiesAlive <= 0) PlayerWonRound();
     }
+
+    // ==========================================
+    // (新增) 己方阵亡与 UI 控制核心代码区
+    // ==========================================
+
+    public void OnAllyDied()
+    {
+        alliesAlive--;
+
+        // 💀 (新增) 熄灭一个己方头像
+        UpdateSurvivalUI(playerIconsGroup, alliesAlive);
+
+        // 如果你想让己方死光时判定敌人赢，可以取消下面这句的注释：
+        // if (alliesAlive <= 0) EnemyWonRound();
+    }
+
+    void InitIcons()
+    {
+        // 激活并重置所有图标，隐藏多余的白框
+        ResetGroupIcons(playerIconsGroup, alliesAlive);
+        ResetGroupIcons(enemyIconsGroup, enemiesAlive);
+    }
+
+    void ResetGroupIcons(GameObject group, int aliveCount)
+    {
+        if (group == null) return;
+
+        Image[] icons = group.GetComponentsInChildren<Image>(true);
+
+        for (int i = 0; i < icons.Length; i++)
+        {
+            if (i < aliveCount)
+            {
+                icons[i].gameObject.SetActive(true);
+                icons[i].sprite = kayoIcon;
+                icons[i].color = Color.white;
+            }
+            else
+            {
+                icons[i].gameObject.SetActive(false);
+            }
+        }
+    }
+
+    void UpdateSurvivalUI(GameObject group, int currentAlive)
+    {
+        if (group == null) return;
+        Image[] icons = group.GetComponentsInChildren<Image>(true);
+
+        if (currentAlive >= 0 && currentAlive < icons.Length)
+        {
+            // 变成半透明暗色，表示已阵亡
+            icons[currentAlive].color = new Color(0.2f, 0.2f, 0.2f, 0.5f);
+        }
+    }
+
+    // ==========================================
 
     IEnumerator HandleRoundEnd(string message)
     {

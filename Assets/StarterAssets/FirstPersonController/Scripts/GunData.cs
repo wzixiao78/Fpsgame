@@ -7,6 +7,9 @@ public class GunData : ScriptableObject
     [Header("基础信息")]
     public string gunName = "新武器";
 
+    [Header("散弹专属设置")]
+    public int pelletsCount = 1;
+
     [Header("伤害与射程")]
     [Tooltip("子弹单发伤害")]
     public int damage = 30;

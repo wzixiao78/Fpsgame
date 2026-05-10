@@ -81,38 +81,46 @@ public class SimpleShoot : MonoBehaviour
             recoilScript.RecoilFire(gunData.recoilForce);
         }
 
-        //  读取芯片里的散布 (spread)
-        Vector3 shootDirection = playerCamera.transform.forward;
-        shootDirection += playerCamera.transform.right * Random.Range(-gunData.spread, gunData.spread);
-        shootDirection += playerCamera.transform.up * Random.Range(-gunData.spread, gunData.spread);
-        shootDirection.Normalize();
+        // 👇 核心修改：读取芯片里的弹丸数量！
+        // 如果是奥丁，这里就是 1（循环 1 次）；如果是喷子，这里就是 8（瞬间循环 8 次发射）
+        int pellets = Mathf.Max(1, gunData.pelletsCount);
 
-        RaycastHit hit;
-        int layerMask = ~LayerMask.GetMask("Player");
-
-        // 读取芯片里的射程 (range)
-        if (Physics.Raycast(playerCamera.transform.position, shootDirection, out hit, gunData.range, layerMask))
+        for (int i = 0; i < pellets; i++)
         {
+            // 读取芯片里的散布 (spread) - 每颗弹丸都有自己独立的随机扩散角度！
+            Vector3 shootDirection = playerCamera.transform.forward;
+            shootDirection += playerCamera.transform.right * Random.Range(-gunData.spread, gunData.spread);
+            shootDirection += playerCamera.transform.up * Random.Range(-gunData.spread, gunData.spread);
+            shootDirection.Normalize();
 
-            if (hit.collider.CompareTag("Ally"))
-            {
-                Debug.Log("停火！那是自己人！");
-                return; // 遇到友军，直接中止这颗子弹的后续伤害逻辑！
-            }
+            RaycastHit hit;
+            int layerMask = ~LayerMask.GetMask("Player");
 
-            BodyPartHitbox hitbox = hit.transform.GetComponent<BodyPartHitbox>();
-            if (hitbox != null)
+            // 读取芯片里的射程 (range)
+            if (Physics.Raycast(playerCamera.transform.position, shootDirection, out hit, gunData.range, layerMask))
             {
-                hitbox.OnHit(gunData.damage); // 读取芯片里的伤害 (damage)
-                TriggerHitMarker();
-            }
-            else
-            {
-                EnemyHealth enemy = hit.transform.GetComponentInParent<EnemyHealth>();
-                if (enemy != null)
+                if (hit.collider.CompareTag("Ally"))
                 {
-                    enemy.TakeDamage(gunData.damage);
+                    Debug.Log("停火！那是自己人！");
+                    // 👇 关键修改：用 continue 代替 return！
+                    // 这样即使一颗弹丸打中友军被没收，剩下的弹丸依然可以穿过缝隙击中后面的敌人！
+                    continue;
+                }
+
+                BodyPartHitbox hitbox = hit.transform.GetComponent<BodyPartHitbox>();
+                if (hitbox != null)
+                {
+                    hitbox.OnHit(gunData.damage); // 读取芯片里的伤害 (damage)
                     TriggerHitMarker();
+                }
+                else
+                {
+                    EnemyHealth enemy = hit.transform.GetComponentInParent<EnemyHealth>();
+                    if (enemy != null)
+                    {
+                        enemy.TakeDamage(gunData.damage);
+                        TriggerHitMarker();
+                    }
                 }
             }
         }
