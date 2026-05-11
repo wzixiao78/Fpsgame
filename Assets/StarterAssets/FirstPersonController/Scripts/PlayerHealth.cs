@@ -5,7 +5,7 @@ public class PlayerHealth : MonoBehaviour
     public float maxHealth = 100f;
     public float maxArmor = 50f;
 
-    private float currentHealth;
+    public float currentHealth; // ⬅️ 修复1：把 private 改成了 public，大门敞开！
     public float currentArmor;
 
     void Start()
@@ -18,8 +18,6 @@ public class PlayerHealth : MonoBehaviour
     public void ResetState()
     {
         currentHealth = maxHealth;
-        // 如果你想每回合连护甲也清零，可以加上下面这句：
-        // currentArmor = 0; 
         RefreshUI();
     }
 
@@ -60,11 +58,12 @@ public class PlayerHealth : MonoBehaviour
 
         if (currentHealth == 0)
         {
-            Die(); // 👈 这里修复了！去掉了导致报错的中文，只保留了纯净的呼叫
+            Die(); 
         }
     }
 
-    void RefreshUI()
+    // ⬅️ 修复2：加上了 public！这样发牌员给完血，可以直接呼叫 UI 刷新屏幕数字！
+    public void RefreshUI() 
     {
         if (PlayerHUD.instance != null)
         {
@@ -76,7 +75,6 @@ public class PlayerHealth : MonoBehaviour
     {
         Debug.Log("玩家阵亡！");
 
-        // 玩家死了，告诉裁判游戏失败
         if (RoundManager.instance != null)
         {
             RoundManager.instance.EnemyWonRound();

@@ -15,7 +15,7 @@ public class RoundManager : MonoBehaviour
     public int scoreToWin = 13;
     private bool isMatchOver = false;
     private int enemiesAlive = 0;
-    private int alliesAlive = 0; // (新增) 记录己方存活人数
+    private int alliesAlive = 0;
 
     [Header("出生点设置")]
     public GameObject enemyPrefab;
@@ -33,12 +33,10 @@ public class RoundManager : MonoBehaviour
     public TextMeshProUGUI playerScoreText;
     public TextMeshProUGUI enemyScoreText;
 
-    // ==========================================
-    [Header("UI 头像设置 (新增)")]
-    public Sprite kayoIcon;             // Kayo 头像图片
-    public GameObject playerIconsGroup; // 己方头像组 (PlayerIconsGroup)
-    public GameObject enemyIconsGroup;  // 敌人头像组 (EnemyIconsGroup)
-    // ==========================================
+    [Header("UI 头像设置")]
+    public Sprite kayoIcon;
+    public GameObject playerIconsGroup;
+    public GameObject enemyIconsGroup;
 
     [Header("时间设置")]
     public float preparationTime = 20f;
@@ -53,7 +51,6 @@ public class RoundManager : MonoBehaviour
 
     void Start()
     {
-        // 没有任何延迟，开局直接强行执行准备阶段！
         StartPreparationPhase();
     }
 
@@ -86,11 +83,10 @@ public class RoundManager : MonoBehaviour
             Destroy(enemy.gameObject);
         }
 
-        // 🧹 2. 核心修复：拔掉旧友军的“物理插头”，防止与新友军发生碰撞爆炸！
+        // 🧹 2. 清理旧友军
         AllyBrain[] oldAllies = FindObjectsOfType<AllyBrain>();
         foreach (AllyBrain ally in oldAllies)
         {
-            // 瞬间关闭旧友军的所有碰撞体和导航，让他们在物理世界“立即消失”
             Collider[] cols = ally.GetComponentsInChildren<Collider>();
             foreach (Collider c in cols) c.enabled = false;
 
@@ -121,7 +117,23 @@ public class RoundManager : MonoBehaviour
             if (healthScript != null) healthScript.ResetState();
         }
 
-        // 🪂 4. 踏踏实实地、没有一丝延迟地空降新友军！
+        // 🧮 4. 提前计算人数，保证 UI 瞬间亮起
+        enemiesAlive = spawnPoints.Length; // 敌人人数
+
+        // 🌟 孤狼协议判断：如果生效了，友军人数强制设为 1（只有玩家自己）
+        if (AugmentManager.instance != null && AugmentManager.instance.isLoneWolfActive)
+        {
+            alliesAlive = 1;
+        }
+        else
+        {
+            alliesAlive = 1 + allySpawnPoints.Length;
+        }
+
+        // 🖼️ 5. 瞬间刷新头像 UI（移到了准备阶段）
+        InitIcons();
+
+        // 🪂 6. 尝试空降友军
         ForceSpawnAllies();
     }
 
@@ -129,7 +141,13 @@ public class RoundManager : MonoBehaviour
     {
         if (allyPrefab == null || allySpawnPoints.Length == 0) return;
 
-        // 直接在这个干净的瞬间，把友军砸在出生点上
+        // 🌟 孤狼协议拦截：如果你是孤狼，直接 return 罢工，绝对不生队友！
+        if (AugmentManager.instance != null && AugmentManager.instance.isLoneWolfActive)
+        {
+            Debug.Log("孤狼协议生效中，本局永久不再生成队友！");
+            return;
+        }
+
         for (int i = 0; i < allySpawnPoints.Length; i++)
         {
             if (allySpawnPoints[i] != null)
@@ -145,20 +163,14 @@ public class RoundManager : MonoBehaviour
         currentTimer = combatTime;
         if (centerMessageText != null) centerMessageText.text = "COMBAT PHASE!";
 
-        // 🧮 (新增) 计算本回合的己方总人数 = 玩家(1) + 友军数量
-        alliesAlive = 1 + allySpawnPoints.Length;
-
+        // 敌人真正在这里生成
         if (enemyPrefab != null && spawnPoints.Length > 0)
         {
-            enemiesAlive = spawnPoints.Length;
             for (int i = 0; i < spawnPoints.Length; i++)
             {
                 Instantiate(enemyPrefab, spawnPoints[i].position, spawnPoints[i].rotation);
             }
         }
-
-        // 🖼️ (新增) 初始化双方头像 UI
-        InitIcons();
     }
 
     public void PlayerWonRound()
@@ -178,31 +190,18 @@ public class RoundManager : MonoBehaviour
     public void OnEnemyDied()
     {
         enemiesAlive--;
-
-        // 💀 (新增) 熄灭一个敌人头像
         UpdateSurvivalUI(enemyIconsGroup, enemiesAlive);
-
         if (enemiesAlive <= 0) PlayerWonRound();
     }
-
-    // ==========================================
-    // (新增) 己方阵亡与 UI 控制核心代码区
-    // ==========================================
 
     public void OnAllyDied()
     {
         alliesAlive--;
-
-        // 💀 (新增) 熄灭一个己方头像
         UpdateSurvivalUI(playerIconsGroup, alliesAlive);
-
-        // 如果你想让己方死光时判定敌人赢，可以取消下面这句的注释：
-        // if (alliesAlive <= 0) EnemyWonRound();
     }
 
     void InitIcons()
     {
-        // 激活并重置所有图标，隐藏多余的白框
         ResetGroupIcons(playerIconsGroup, alliesAlive);
         ResetGroupIcons(enemyIconsGroup, enemiesAlive);
     }
@@ -213,9 +212,14 @@ public class RoundManager : MonoBehaviour
 
         Image[] icons = group.GetComponentsInChildren<Image>(true);
 
-        for (int i = 0; i < icons.Length; i++)
+        // 如果 group 自己也带了 Image（比如背景底板），为了防止报错，我们跳过第 0 个（自身）
+        // 如果你的头像本身就在最高层，把 i = 1 改回 i = 0
+        int startIdx = (group.GetComponent<Image>() != null) ? 1 : 0;
+        int iconCount = 0;
+
+        for (int i = startIdx; i < icons.Length; i++)
         {
-            if (i < aliveCount)
+            if (iconCount < aliveCount)
             {
                 icons[i].gameObject.SetActive(true);
                 icons[i].sprite = kayoIcon;
@@ -225,6 +229,7 @@ public class RoundManager : MonoBehaviour
             {
                 icons[i].gameObject.SetActive(false);
             }
+            iconCount++;
         }
     }
 
@@ -233,14 +238,15 @@ public class RoundManager : MonoBehaviour
         if (group == null) return;
         Image[] icons = group.GetComponentsInChildren<Image>(true);
 
-        if (currentAlive >= 0 && currentAlive < icons.Length)
+        int startIdx = (group.GetComponent<Image>() != null) ? 1 : 0;
+
+        // 当人数减少时，把对应的头像变灰
+        int targetIndex = startIdx + currentAlive;
+        if (targetIndex >= startIdx && targetIndex < icons.Length)
         {
-            // 变成半透明暗色，表示已阵亡
-            icons[currentAlive].color = new Color(0.2f, 0.2f, 0.2f, 0.5f);
+            icons[targetIndex].color = new Color(0.2f, 0.2f, 0.2f, 0.5f);
         }
     }
-
-    // ==========================================
 
     IEnumerator HandleRoundEnd(string message)
     {
