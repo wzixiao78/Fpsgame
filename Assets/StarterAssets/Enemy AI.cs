@@ -194,4 +194,18 @@ public class EnemyAI : MonoBehaviour
             }
         }
     }
+    void LateUpdate()
+    {
+        if (currentTarget != null)
+        {
+            Vector3 direction = (currentTarget.position - transform.position).normalized;
+            direction.y = 0; // 锁死Y轴，保证身体直立
+            if (direction != Vector3.zero)
+            {
+                Quaternion lookRotation = Quaternion.LookRotation(direction);
+                // 强行旋转身体正对玩家
+                transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, Time.deltaTime * aimSpeed);
+            }
+        }
+    }
 }

@@ -33,6 +33,9 @@ public class RoundManager : MonoBehaviour
     public TextMeshProUGUI playerScoreText;
     public TextMeshProUGUI enemyScoreText;
 
+    [Header("击杀反馈设置")]
+    public GameObject killBanner; 
+
     [Header("UI 头像设置")]
     public Sprite kayoIcon;
     public GameObject playerIconsGroup;
@@ -177,6 +180,12 @@ public class RoundManager : MonoBehaviour
     {
         if (currentState == RoundState.RoundEnd || isMatchOver) return;
         playerScore++;
+        if (GameEconomy.instance != null)
+        {
+            GameEconomy.instance.AddMoney(3000);
+            Debug.Log("<color=green>回合胜利！奖励 $3000</color>");
+        }
+
         StartCoroutine(HandleRoundEnd("PLAYER WON THE ROUND"));
     }
 
@@ -184,6 +193,14 @@ public class RoundManager : MonoBehaviour
     {
         if (currentState == RoundState.RoundEnd || isMatchOver) return;
         enemyScore++;
+
+        
+        if (GameEconomy.instance != null)
+        {
+            GameEconomy.instance.AddMoney(1900);
+            Debug.Log("<color=orange>回合失败。低保 $1900</color>");
+        }
+
         StartCoroutine(HandleRoundEnd("ENEMY WON THE ROUND"));
     }
 
@@ -191,7 +208,24 @@ public class RoundManager : MonoBehaviour
     {
         enemiesAlive--;
         UpdateSurvivalUI(enemyIconsGroup, enemiesAlive);
+
+        // 👇 新增：触发击杀图标闪现！
+        StartCoroutine(ShowKillBanner());
+
         if (enemiesAlive <= 0) PlayerWonRound();
+    }
+
+    // 👇 新增：控制图标显示和消失的魔法（协程）
+    IEnumerator ShowKillBanner()
+    {
+        if (killBanner != null)
+        {
+            killBanner.SetActive(true); 
+
+            yield return new WaitForSeconds(1.5f); // 在屏幕上停留 1.5 秒
+
+            killBanner.SetActive(false); // 隐藏图标
+        }
     }
 
     public void OnAllyDied()
