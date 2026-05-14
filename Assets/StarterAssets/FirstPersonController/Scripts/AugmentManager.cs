@@ -15,6 +15,8 @@ public class AugmentManager : MonoBehaviour
 
     [Header("玩家引用")]
     public GameObject player;             // 拖入你的玩家模型
+    [Header("UI 状态同步")]
+    public GameObject[] teammateAvatars;
 
     void Awake()
     {
@@ -111,6 +113,13 @@ public class AugmentManager : MonoBehaviour
                     // 💥 直接抹杀！
                     Destroy(ally);
                     sacrificedCount++;
+                    if (teammateAvatars != null)
+                    {
+                        foreach (GameObject avatar in teammateAvatars)
+                        {
+                            if (avatar != null) avatar.SetActive(false); // 强制关掉头像
+                        }
+                    }
                 }
 
                 Debug.Log($"孤狼协议生效！成功献祭了 {sacrificedCount} 个队友！");

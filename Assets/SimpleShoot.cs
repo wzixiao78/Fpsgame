@@ -15,7 +15,12 @@ public class SimpleShoot : MonoBehaviour
     public GameObject muzzleFlashPrefab; // 火光特效
     public AudioSource audioSource;
     public AudioClip shootSound;      // 可以给不同枪放不同音效
+    public AudioClip reloadSound;
     public GameObject hitMarkerUI;
+
+    [Header("换弹视觉设置")]
+    public Animator gunAnimator;       // 拖入挂着这把枪动画机的物体
+    public GameObject magazineModel;   // 拖入这把枪独立的“弹匣”模型
 
     // 内部运行时的状态变量（不需要在面板修改）
     private int currentAmmo;
@@ -40,7 +45,7 @@ public class SimpleShoot : MonoBehaviour
     {
         // 准备阶段不准开枪
         if (RoundManager.instance != null && RoundManager.instance.currentState != RoundManager.RoundState.CombatPhase)
-            return;
+           return;
 
         if (gunData == null || isReloading) return;
 
@@ -68,7 +73,11 @@ public class SimpleShoot : MonoBehaviour
         UpdateUI();
 
         // 播放专属音效和火光
-        if (audioSource && shootSound) audioSource.PlayOneShot(shootSound);
+        if (audioSource && shootSound)
+        {
+            audioSource.pitch = Random.Range(0.95f, 1.05f);
+            audioSource.PlayOneShot(shootSound);
+        }
         if (muzzleFlashPrefab && muzzlePoint)
         {
             GameObject flash = Instantiate(muzzleFlashPrefab, muzzlePoint.position, muzzlePoint.rotation, muzzlePoint);
@@ -135,7 +144,15 @@ public class SimpleShoot : MonoBehaviour
     IEnumerator Reload()
     {
         isReloading = true;
-
+        if (audioSource && reloadSound)
+        {
+            audioSource.pitch = 1.0f;
+            audioSource.PlayOneShot(reloadSound);
+        }
+        if (gunAnimator != null)
+        {
+            gunAnimator.SetTrigger("Reload");
+        }
         // 读取芯片里的换弹时间 (reloadTime)
         yield return new WaitForSeconds(gunData.reloadTime);
 
@@ -179,5 +196,15 @@ public class SimpleShoot : MonoBehaviour
         {
             PlayerHUD.instance.UpdateAmmo(currentAmmo, reserveAmmo);
         }
+    }
+    // 新加：这两个函数是给“动画时间轴”专门调用的！
+    public void HideMagazine()
+    {
+        if (magazineModel != null) magazineModel.SetActive(false); // 手拔出弹匣时隐藏
+    }
+
+    public void ShowMagazine()
+    {
+        if (magazineModel != null) magazineModel.SetActive(true);  // 手拍入新弹匣时显示
     }
 }

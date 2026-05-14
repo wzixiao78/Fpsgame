@@ -292,18 +292,42 @@ public class RoundManager : MonoBehaviour
 
     private void CheckMatchWinner()
     {
-        if (playerScore >= scoreToWin && (playerScore - enemyScore) >= 2)
+        // 核心判定：只要玩家分数达到了你在面板填的 scoreToWin，直接胜利！
+        if (playerScore >= scoreToWin)
         {
-            isMatchOver = true;
-            if (centerMessageText != null) centerMessageText.text = $"MATCH VICTORY!\n{playerScore} : {enemyScore}";
+            isMatchOver = true; // 标记比赛彻底结束
+
+            // 呼叫你的大屏结算系统！
+            GameOverManager gm = FindObjectOfType<GameOverManager>();
+            if (gm != null)
+            {
+                gm.ShowVictory(); // 弹出蓝色 VICTORY！
+            }
+            else
+            {
+                // 保底机制：万一没找到 UI 面板，至少在屏幕中间打字
+                if (centerMessageText != null) centerMessageText.text = $"MATCH VICTORY!\n{playerScore} : {enemyScore}";
+            }
         }
-        else if (enemyScore >= scoreToWin && (enemyScore - playerScore) >= 2)
+        // 核心判定：如果敌人先达到了目标分，直接失败！
+        else if (enemyScore >= scoreToWin)
         {
-            isMatchOver = true;
-            if (centerMessageText != null) centerMessageText.text = $"MATCH DEFEAT...\n{playerScore} : {enemyScore}";
+            isMatchOver = true; // 标记比赛彻底结束
+
+            // 呼叫你的大屏结算系统！
+            GameOverManager gm = FindObjectOfType<GameOverManager>();
+            if (gm != null)
+            {
+                gm.ShowDefeat(); // 弹出红色 DEFEAT！
+            }
+            else
+            {
+                if (centerMessageText != null) centerMessageText.text = $"MATCH DEFEAT...\n{playerScore} : {enemyScore}";
+            }
         }
         else
         {
+            // 双方都没达到赛点，进入下一回合的准备阶段
             StartPreparationPhase();
         }
     }
